@@ -31,7 +31,7 @@ class TTS:
         )
     
     def _download_models(self):
-        """Download pre-trained models"""
+        """Download pre-trained models from HuggingFace Hub"""
         import os
         from pathlib import Path
         
@@ -39,9 +39,30 @@ class TTS:
         cache_dir = Path.home() / ".cache" / "neural_tts"
         cache_dir.mkdir(parents=True, exist_ok=True)
         
-        # TODO: Implement model download from HuggingFace Hub
-        # For now, return local path
-        return "checkpoints"
+        repo_id = "vyassoham/neural-tts"
+        
+        try:
+            from huggingface_hub import hf_hub_download
+            
+            print(f"Downloading acoustic model from HuggingFace Hub ({repo_id})...")
+            hf_hub_download(
+                repo_id=repo_id,
+                filename="acoustic_model.pt",
+                local_dir=str(cache_dir)
+            )
+            
+            print(f"Downloading vocoder model from HuggingFace Hub ({repo_id})...")
+            hf_hub_download(
+                repo_id=repo_id,
+                filename="vocoder_model.pt",
+                local_dir=str(cache_dir)
+            )
+            
+            return str(cache_dir)
+        except Exception as e:
+            print(f"Warning: Could not download pre-trained models from HuggingFace Hub ({e}).")
+            print("Falling back to local 'checkpoints' directory.")
+            return "checkpoints"
     
     def speak(self, text, language='en', output_file=None, **kwargs):
         """

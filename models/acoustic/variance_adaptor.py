@@ -8,6 +8,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class LayerNorm1d(nn.Module):
+    """Layer Normalization over channels for 1D convolutions"""
+    def __init__(self, num_features, eps=1e-5):
+        super().__init__()
+        self.layer_norm = nn.LayerNorm(num_features, eps=eps)
+        
+    def forward(self, x):
+        x = x.transpose(1, 2)
+        x = self.layer_norm(x)
+        x = x.transpose(1, 2)
+        return x
+
+
 class VariancePredictor(nn.Module):
     """Generic variance predictor (for duration, pitch, energy)"""
     
@@ -18,13 +31,13 @@ class VariancePredictor(nn.Module):
             nn.Sequential(
                 nn.Conv1d(hidden_dim, filter_size, kernel_size, padding=kernel_size//2),
                 nn.ReLU(),
-                nn.LayerNorm(filter_size),
+                LayerNorm1d(filter_size),
                 nn.Dropout(dropout)
             ),
             nn.Sequential(
                 nn.Conv1d(filter_size, filter_size, kernel_size, padding=kernel_size//2),
                 nn.ReLU(),
-                nn.LayerNorm(filter_size),
+                LayerNorm1d(filter_size),
                 nn.Dropout(dropout)
             )
         ])
@@ -80,7 +93,9 @@ class LengthRegulator(nn.Module):
         
         # Calculate output length
         if max_len is None:
-            max_len = durations.sum(dim=1).max().item()
+            max_len = int(durations.sum(dim=1).max().item())
+        else:
+            max_len = int(max_len)
         
         # Initialize output
         output = torch.zeros(batch_size, max_len, hidden_dim, 
